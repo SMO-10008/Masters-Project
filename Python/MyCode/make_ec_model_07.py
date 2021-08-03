@@ -1,3 +1,7 @@
+# This script creates an enzymatically constrained version of E. coli genome-scale metabolic model iML1515
+# based on the GECKO method.
+# Shantala Marie Ødegården, 2021.
+
 # import
 from cobra.io import read_sbml_model, write_sbml_model
 
