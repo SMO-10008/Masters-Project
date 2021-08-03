@@ -1,12 +1,14 @@
 # This script creates an enzymatically constrained version of E. coli genome-scale metabolic model iML1515
 # based on the GECKO method.
+# It does not take any inputs, if one wants to change the upper bound for enzyme amount, it is marked with TODO
+# and can be changed directly in the code.
 # Shantala Marie Ødegården, 2021.
 
 # import
 from cobra.io import read_sbml_model, write_sbml_model
 
 
-# functions
+# read files with enzymatic data, store the data as objects
 def read_data():
     import numpy as np
 
@@ -26,8 +28,7 @@ def read_data():
             self.bigg_genes = bigg_genes
             self.alt_names = alt_names
 
-
-    # READ KCAT FILE
+    # read kcat file
     f = open('kcat.txt')
     all_lines_kcat = f.readlines()
     f.close()
@@ -45,7 +46,7 @@ def read_data():
         # add to list of Kcat objects
         all_kcats.append(Kcat(current_react_id, current_kcat_value))
 
-    # READ ENZYME FILE
+    # read enzyme file
     f = open('enzymes_01.txt', 'r')
     all_lines_enzyme = f.readlines()
     f.close()
@@ -64,7 +65,7 @@ def read_data():
         current_mw = current_line_list[1]
         current_genes = current_line_list[2]
 
-        # GET MOLECULAR WEIGHT:
+        # get molecular weight:
         # handle multiple MW. will choose the highest value
         current_mw_list_string = current_mw.split('//')
 
@@ -86,14 +87,10 @@ def read_data():
         else:
             current_mw_float = current_mw_list_float[0]
 
-        # convert from kilodaltons to grams
-        # not sure if this conversion is good
-        # current_mw_float = current_mw_float * 1.66053904E-21
-
         # Da = g/mol, so convert kDa to Da (and g/mol) :
         current_mw_float = current_mw_float / 1000
 
-        # GET GENES:
+        # get genes:
         current_genes = current_genes[:-1]
         current_genes_list = current_genes.split('//')
         processed_genes_list = []
@@ -106,8 +103,8 @@ def read_data():
                 # remove leading and trailing spaces, and add to processed list
                 processed_genes_list.append(gene.strip())
 
-        # remove gene names that are definitely not BiGG identifiers, as these will be used to match enzymes to reactions
-        # all BiGG identifiers in the model starts with 'b', except s0001, but this one is not in the enzyme genes
+        # remove gene names that are not BiGG identifiers, as these will be used to match enzymes to reactions
+        # all BiGG identifiers in the model starts with 'b', except s0001, but this one is not among the enzyme genes
         # the 'b' is also always followed by a number
         final_genes_list = []
         # other gene names go in separate list
@@ -154,10 +151,11 @@ def read_data():
     return all_enzymes, all_kcats
 
 
+# split reversible reactions into two separate reactions
 def split_reversible_reactions(model):
     from cobra import Reaction
 
-    # SPLIT REVERSIBLE REACTIONS into a couple going in each direction
+    # split reversible reactions into a couple going in each direction
     for rxn in model.reactions:
         # if reaction is reversible:
         # this should exclude export reactions
@@ -176,6 +174,7 @@ def split_reversible_reactions(model):
     print('split reversible reactions complete')
 
 
+# incorporate enzymes into the model
 def add_enzymes(model, all_enzymes, all_kcats):
     from cobra import Reaction, Metabolite
 
@@ -183,30 +182,21 @@ def add_enzymes(model, all_enzymes, all_kcats):
     # all the enzymes draw mass from this pool
     # set compartment to e and use import reaction - this seems to work
     # as opposed to setting compartment to c and have no import - I guess the metabolite must come from somewhere
-    # though I feel like there should be a better way
+    # may be a better way to do this - look into later
     enzyme_pool_met = Metabolite('enzyme_pool', name='Enzyme pool pseudo-metabolite', compartment='e',
                                  formula=None, charge=None)
 
     # enzyme pool import reaction
     # seems to fix infeasible solution when enzyme metabolite compartments are set to 'c'
     # can be used to restrict the total enzyme flux
-    # constraint seems to work!
-    # importing enzymes does not represent what really happens in the cell, so not ideal I guess
+    # importing enzymes does not represent what really happens in the cell - look for different ways later
     EX_pool_enzyme = Reaction('EX_pool_enzyme')
     EX_pool_enzyme.lower_bound = 0
 
-    #  new source: 70.1 % of dry weight is protein
-    # ec05: p = 0.701, f=0.85, s = 0.85, ub = 0.5064725
-    # ec pp ("plenty protein" - should act as not constrained by enzymes): ub = 1
-    # actually does and should not - original does not consider original protein
-    # takes ub = 5 for similar plot to original
-    # ub = 1 would mean 100% of cell dry weight is protein and 100% of protein is enzyme
-    # but still constrains optimal solutions for ub > 1
-    # ec pp100: ub = 100
-    # c_ec_0-16: p = 0.701, f = 0.4461, s = 0.51, ub = 0.159485211
-    #
+    # set upper bound to constrain model with enzyme amount
     # TODO : set ub
     # alternative 1: use p*f*s
+    # source: 70.1 % of dry weight is protein
     p = 0.701
     f = 0.4461
     s = 0.51
@@ -217,9 +207,6 @@ def add_enzymes(model, all_enzymes, all_kcats):
     EX_pool_enzyme.upper_bound = ub
     EX_pool_enzyme.add_metabolites({enzyme_pool_met: 1})
     model.add_reactions([EX_pool_enzyme])
-
-    # a list of the abundances of the enzymes in the model
-    enzyme_abundances = []
 
     # counters
     num_enzymes_added = 0
@@ -281,8 +268,6 @@ def add_enzymes(model, all_enzymes, all_kcats):
                                     enzyme_reaction.name = e.name + ' from enzyme pool'
                                     enzyme_reaction.lower_bound = 0
                                     enzyme_reaction.upper_bound = 1000
-                                    # from the GECKO article, it seems to be just mw
-                                    # say, 1 gram from the pool --> 1 gram/mol, sounds right
                                     enzyme_reaction.add_metabolites(
                                         {enzyme_pool_met: -e.mw, enzyme_metabolite: 1})
                                     model.add_reactions([enzyme_reaction])
@@ -300,6 +285,7 @@ def add_enzymes(model, all_enzymes, all_kcats):
     print('add enzymes complete')
 
 
+# make arm reactions so that isozyme reactions may happen separately, but still keep original upper bound
 def make_arm_reactions(model):
     from typing import List, Any
     from cobra import Reaction, Metabolite
@@ -515,7 +501,7 @@ def make_arm_reactions(model):
 def add_bofs(model):
     from cobra import Model, Reaction, Metabolite
     import numpy as np
-    # GET BIOMASS FUNCTIONS
+    # get biomass functions
 
     # read file with biomass functions, add lines to array
     f = open('Biomasses_edited.txt')
@@ -663,7 +649,7 @@ def tune_kcats(model):
         old_coef = bmc_reaction.get_coefficient(bmc_enzyme.id)
         # "new_coef = old_coef * 0.1" resulted in some strange rounding errors, but the two next lines fixes the issue
         num_decimals = str(old_coef)[::-1].find('.')
-        new_coef = round(old_coef * 0.1, num_decimals+1)
+        new_coef = round(old_coef * 0.1, num_decimals + 1)
         bmc_reaction.add_metabolites({bmc_enzyme: -old_coef})
         bmc_reaction.add_metabolites({bmc_enzyme: new_coef})
         # print(old_coef)
@@ -696,4 +682,3 @@ if __name__ == "__main__":
     # print('#rxns and #mets after adding BOFs: ', len(model.reactions), len(model.metabolites))
     tune_kcats(model)
     write_sbml_model(model, 'rounded_ec_0-16_iML1515.xml')
-
