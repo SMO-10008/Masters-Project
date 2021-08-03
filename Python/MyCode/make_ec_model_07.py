@@ -148,9 +148,9 @@ def read_data():
     for e in all_enzymes:
         if np.isnan(e.mw):
             e.mw = mw_avg
-    print('number of enzyme objects: ', len(all_enzymes))
-    print('number of kcat objects: ', len(all_kcats))
-    print('read data complete')
+    # print('number of enzyme objects: ', len(all_enzymes))
+    # print('number of kcat objects: ', len(all_kcats))
+    # print('read data complete')
     return all_enzymes, all_kcats
 
 
@@ -295,8 +295,7 @@ def add_enzymes(model, all_enzymes, all_kcats):
         all_enzymes_mass += e.mw
     for e in enzymes_in_model:
         model_enzymes_mass += e.mw
-    print(all_enzymes_mass, model_enzymes_mass)
-
+    # print(all_enzymes_mass, model_enzymes_mass)
 
     print('add enzymes complete')
 
@@ -339,7 +338,8 @@ def make_arm_reactions(model):
             rule_list = rule_original.split(' or ')
             # print('BEFORE: ', rule_list)
 
-            # make the rules into a list of lists, containing genes like [solo_enzyme1, [complex_enzymeA, complex_enzymeB]]
+            # make the rules into a list of lists, containing genes as:
+            # [solo_enzyme1, [complex_enzymeA, complex_enzymeB]]
             for i in range(len(rule_list)):
                 sub_rule = rule_list[i]
                 complex_list = sub_rule.split(' and ')
@@ -478,7 +478,7 @@ def make_arm_reactions(model):
                                                 coef = -round(1 / k.kcat_value, 5)
                                                 sub_reaction.add_metabolites({enzyme_metabolite: coef})
 
-                        print('sub 2: ', sub_reaction)
+                        # print('sub 2: ', sub_reaction)
                         # add sub-reaction to model
                         model.add_reactions([sub_reaction])
 
@@ -497,7 +497,7 @@ def make_arm_reactions(model):
                     # add intermediate pseudo-metabolite to reaction
                     sub_reaction.add_metabolites({ipm_met: 1})
 
-                    print('sub 1: ', sub_reaction)
+                    # print('sub 1: ', sub_reaction)
                     # add sub reaction 1 to model
                     model.add_reactions([sub_reaction])
 
@@ -669,7 +669,7 @@ def tune_kcats(model):
         # print(old_coef)
         # print(new_coef)
         # print('new rxn: ', bmc_reaction.reaction)
-        print("{0},{1},{2},{3}".format(bmc_reaction.id, bmc_enzyme.id, old_coef, new_coef))
+        # print("{0},{1},{2},{3}".format(bmc_reaction.id, bmc_enzyme.id, old_coef, new_coef))
 
         sol = model.optimize()
         # print('new solution: ', sol.objective_value)
@@ -687,13 +687,13 @@ if __name__ == "__main__":
     all_enzymes, all_kcats = read_data()
     model = read_sbml_model('iML1515.xml')
     split_reversible_reactions(model)
-    print('#rxns and #mets after rev split: ', len(model.reactions), len(model.metabolites))
+    # print('#rxns and #mets after rev split: ', len(model.reactions), len(model.metabolites))
     add_enzymes(model, all_enzymes, all_kcats)
-    print('#rxns and #mets after adding enzymes: ', len(model.reactions), len(model.metabolites))
+    # print('#rxns and #mets after adding enzymes: ', len(model.reactions), len(model.metabolites))
     make_arm_reactions(model)
-    print('#rxns and #mets after arm reactions: ', len(model.reactions), len(model.metabolites))
+    # print('#rxns and #mets after arm reactions: ', len(model.reactions), len(model.metabolites))
     add_bofs(model)
-    print('#rxns and #mets after adding BOFs: ', len(model.reactions), len(model.metabolites))
+    # print('#rxns and #mets after adding BOFs: ', len(model.reactions), len(model.metabolites))
     tune_kcats(model)
     write_sbml_model(model, 'rounded_ec_0-16_iML1515.xml')
 
