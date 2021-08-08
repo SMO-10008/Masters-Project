@@ -681,4 +681,4 @@ if __name__ == "__main__":
     add_bofs(model)
     # print('#rxns and #mets after adding BOFs: ', len(model.reactions), len(model.metabolites))
     tune_kcats(model)
-    write_sbml_model(model, 'rounded_ec_0-16_iML1515.xml')
+    write_sbml_model(model, 'rounded_ec_iML1515.xml')
