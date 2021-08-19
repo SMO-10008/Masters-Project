@@ -20,7 +20,7 @@ class MW:
 
 # read model
 # model = read_sbml_model('iML1515_withBOFs.xml')
-model = read_sbml_model('ii_ec_0-16_iML1515.xml')
+model = read_sbml_model('rounded_ec_iML1515.xml')
 
 # set solver
 model.solver = 'gurobi'
@@ -193,6 +193,7 @@ for i in range(len(metabolite_list)):
 # normalize new biomass reactions
 for biomass_hip in model.reactions:
     if biomass_hip.id.startswith('BIOMASS_Ec_iML1515_HIP_C'):
+        print('ID: ', biomass_hip.id)
         # SCALE TO 1 g/(h * CDW)
         mass_before = 0
 
@@ -238,4 +239,4 @@ for biomass_hip in model.reactions:
         # for met in biomass_hip.metabolites:
         #     print(met.id, met.formula, biomass_hip.get_coefficient(met.id))
 
-write_sbml_model(model, "ii_ec_0-16_HIP_05.xml")
+write_sbml_model(model, "rounded_ec_iML1515_HIP_05.xml")
