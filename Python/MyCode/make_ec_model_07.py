@@ -139,8 +139,8 @@ def read_data():
     mw_avg = mw_sum / counter
     # print(mw_avg, mw_min, mw_max)
 
-    # set all enzymes without mw to the average of about 1.2e-18 grams (78 kDa or 0.078 Da)
-    # not ideal, as mws range from about 1.1e-19 grams (7kDa or 0.007 Da) to 1.6e-17 grams (977 kDa or 0.977 Da)
+    # set all enzymes without mw to the average of about 1.2e-18 grams (78 kDa)
+    # not ideal, as mws range from about 1.1e-19 grams (7kDa) to 1.6e-17 grams (977 kDa)
     # but they need to have some mw
     for e in all_enzymes:
         if np.isnan(e.mw):
